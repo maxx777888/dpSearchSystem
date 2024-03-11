@@ -1,0 +1,8 @@
+host=localhost
+port=5432
+dbname=myDP
+user=postgres
+password=A159159a
+https://en.wikipedia.org/wiki/Main_Page
+3
+8080
