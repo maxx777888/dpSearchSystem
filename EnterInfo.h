@@ -112,9 +112,8 @@ private:
 	//Превращает строку в объект Link
 	Link makeLink(std::string str);
 	//Возвращает true если ссылка на страницу уже добавлена в таблицу
-	bool isNewLinkFound(std::string page, std::vector<std::string> page_words);
-	//Возвращает true если ссылка на страницу есть в черном списке 
-	bool isInBlackList(std::string page, std::vector<std::string> page_words);
+	bool isLinkExistsInBD(std::string page, std::vector<std::string> page_words);
+	
 	//Возвращает строку отчищенную от фрагментов
 	std::string remove_fragments(const std::string& str);
 	//Делает проверку на картинку, если ссылка имеет рассширение как у картинки, возвращает true

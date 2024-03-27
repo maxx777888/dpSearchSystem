@@ -587,18 +587,20 @@ Link EnterInfo::makeLink(std::string str)
 	
 	if (str.at(0) == '/')
 	{
-		std::string host_and_query = str.substr(str.find("/") + 1);
-		size_t pos = host_and_query.find("/");
+		str.erase(0, str.find_first_not_of("/"));
+		size_t pos = str.find("/");
 		if (pos == std::string::npos)
 		{
-			hostName = host_and_query;
+			hostName = str;
 			query = "/";
 		}
 		else {
-
-			hostName = host_and_query.substr(0, pos);
-			query = host_and_query.substr(pos);
+			hostName = str.substr(0, pos);
+			query = str.substr(pos);
 		}
+
+	
+		
 	}
 	else
 	{
@@ -659,13 +661,20 @@ std::vector<std::string> EnterInfo::getBlackListPageTitles()
 	return words;
 }
 
-bool EnterInfo::isNewLinkFound(std::string page, std::vector<std::string> page_words)
-{
-	return std::find(page_words.begin(), page_words.end(), page) != page_words.end();
-}
 
-bool EnterInfo::isInBlackList(std::string page, std::vector<std::string> page_words)
+bool EnterInfo::isLinkExistsInBD(std::string page, std::vector<std::string> page_words)
 {
+	page = remove_fragments(page);
+	if (page.at(0) == '/')
+	{ 
+		page.erase(0, page.find_first_not_of("/"));
+		
+		std::stringstream ss;
+		ss << "https://" << page;
+		page = ss.str();
+		
+	}
+
 	return std::find(page_words.begin(), page_words.end(), page) != page_words.end();
 }
 
@@ -701,11 +710,8 @@ std::vector<std::string> EnterInfo::getSearchResult(std::string search_str)
 
 std::vector<Link> EnterInfo::extract_links(const std::string html)
 {
-	
-
 	std::string html_to_get_links = html;
 	
-
 	std::regex link_regex("<a href=\"(.*?)\"", std::regex::icase);
 	std::vector<std::string> old_links = getPageTitles();
 	std::vector<std::string> black_list_links = getBlackListPageTitles();
@@ -717,34 +723,40 @@ std::vector<Link> EnterInfo::extract_links(const std::string html)
 	{
 		std::string str = match[1];
 
-		if (black_list_links.size() != 0)
+		if (isValidDomainName(str))
 		{
-			if (isInBlackList(str, black_list_links))
+			if (black_list_links.size() != 0)
 			{
-				html_to_get_links.erase(match.position(), match.length());
-				continue;
-			}
-		}
-
-		if (old_links.size() == 0) {
-
-			if (isValidDomainName(str))
-			{
-				new_links.push_back(remove_fragments(str));
-			}
-		}
-		else {
-			if (!isNewLinkFound(str, old_links))
-			{
-				if (isValidDomainName(str))
+				if (isLinkExistsInBD(str, black_list_links))
 				{
-					new_links.push_back(remove_fragments(str));					
+					html_to_get_links.erase(match.position(), match.length());
+					continue;
+				} 
+			}
+
+			if (old_links.size() != 0) 
+			{
+				if (isLinkExistsInBD(str, old_links))
+				{
+					html_to_get_links.erase(match.position(), match.length());
+					continue;
 				}
 			}
-		}
 
+			new_links.push_back(remove_fragments(str));
+
+		}
 		html_to_get_links.erase(match.position(), match.length());
 	}
+
+	std::cout << std::endl;
+	std::cout << "The links to add to DB " << std::endl;
+	for (auto v : new_links)
+	{
+		std::cout << v << std::endl;
+	}
+	std::cout << "That it " << std::endl;
+	std::cout << std::endl;
 	
 	return to_links(new_links);
 }
@@ -869,17 +881,14 @@ bool EnterInfo::has_image_extension(const std::string& line)
 
 bool EnterInfo::isRelativeLinkDomainNameValid(const std::string& domain)
 {
-	// Check for at least one dot (.)
 	if (domain.find('.') == std::string::npos) {
 		return false;
 	}
 
-	// Check for leading or trailing dots
 	if (domain.front() == '.' || domain.back() == '.') {
 		return false;
 	}
 
-	// Basic check for length (1-253 characters)
 	if (domain.size() < 1 || domain.size() > 253) {
 		return false;
 	}
@@ -900,7 +909,6 @@ bool EnterInfo::isValidDomainName(const std::string& name)
 
 	if (name.at(0) == '/')
 	{
-		// Проверка, является ли первое слово допустимым доменным именем
 		if (!isRelativeLinkDomainNameValid(name.substr(name.find("/") + 1)))
 		{
 			return false;
