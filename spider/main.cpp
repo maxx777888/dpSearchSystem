@@ -35,22 +35,48 @@ void threadPoolWorker() {
 void parseLink(const Link& link, int depth, EnterInfo &s)
 {
 	try {
-
+		
+		std::cout << "\x1b[91m" << "Recursion number is " << depth << "\x1b[0m" << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 		std::string html = getHtmlContent(link);
 
 		if (html.size() == 0)
 		{
+			std::cout << s.getLinkPageName(link) << " #---> ";
 			std::cout << "Failed to get HTML Content" << std::endl;
+			if (s.insertBlackListPage(s.getLinkPageName(link)))
+			{
+				std::cout << s.getLinkPageName(link) << " added to Black List " << std::endl;
+			}
+			
 			return;
 		} 
+
+		html.erase(std::remove(
+			html.begin(),
+			html.end(), '\n'),
+			html.end());
+
 		std::string documentName = s.getLinkPageName(link);
+		
 		// TODO: Parse HTML code here on your own
 		s.setDataToDB(documentName, html);
 		// TO: Collect more links from HTML code and add them to the parser like that:
 		
 		std::vector<Link> links = { s.extract_links(html) };
+		
+		if (links.size() != 0)
+		{
+			std::cout << "\x1b[95m" << "New Links were found = " << links.size() << "\x1b[0m" << std::endl;
+			for (Link l : links) {
+				std::cout << s.getLinkPageName(l) << std::endl;
+			}
+			std::cout << "\x1b[95m" << "Printing new links finished" << "\x1b[0m" << std::endl;
+		}
+		else {
+			std::cout << "\x1b[95m" << "No more New links were found." << "\x1b[0m" << std::endl;
+		}
 		
 
 		if (depth > 0) {
@@ -72,8 +98,6 @@ void parseLink(const Link& link, int depth, EnterInfo &s)
 	}
 
 }
-
-
 
 int main()
 {

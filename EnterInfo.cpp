@@ -19,7 +19,6 @@ EnterInfo::EnterInfo(const std::string& _file) : fileName(_file)
 	}	
 }
 
-
 bool EnterInfo::isEstablishConnection(std::shared_ptr<pqxx::connection> c)
 {
 	if (c) {
@@ -57,6 +56,12 @@ void EnterInfo::creatTable()
 			"PRIMARY KEY(document_id, word_id), "
 			"FOREIGN KEY(document_id) REFERENCES documents(id), "
 			"FOREIGN KEY(word_id) REFERENCES words(id)"
+			")");
+		
+		// —оздание таблицы "Black-List"
+		tx.exec("CREATE TABLE IF NOT EXISTS Black_List ("
+			"id SERIAL PRIMARY KEY, "
+			"black_list_title VARCHAR(255) NOT NULL UNIQUE "
 			")");
 
 		tx.commit();
@@ -205,18 +210,115 @@ std::map<std::string, int> EnterInfo::words_count(const std::string& text)
 
 void EnterInfo::getServerInfo()
 {
-	starting_page = makeLink(dataFromIniFileVector.at(5));
-	max_recursion = std::stoi(dataFromIniFileVector.at(6));
-	server_port_number = std::stoi(dataFromIniFileVector.at(7));
+	std::string startPageStr = "StartPage=";
+	std::string recursionStr = "RecursionDepth=";
+	std::string portStr = "Port=";
+	bool spF = false;
+	bool rF = false;
+	bool pF = false;
+
+	for (const auto& str : dataFromIniFileVector) {
+		if (str.find(startPageStr) == 0) {
+			starting_page = makeLink(str.substr(startPageStr.length()));
+			spF = true;
+		}
+		if (str.find(recursionStr) == 0) {
+			max_recursion = std::stoi(str.substr(recursionStr.length()));
+			rF = true;
+		}
+		if (str.find(portStr) == 0) {
+			server_port_number = std::stoi(str.substr(portStr.length()));
+			pF = true;
+		}
+	}
+	if (spF == false) { std::cout << "Starting Page was not found!!!" << std::endl; }
+	if (rF == false) { std::cout << "Recursion Depth was not found!!!" << std::endl; }
+	if (pF == false) { std::cout << "Port Number was not found!!!" << std::endl; }
 }
 
 std::string EnterInfo::enterToDBString()
 {
-	std::string readyToEnter = dataFromIniFileVector.at(0) + " " +
-		dataFromIniFileVector.at(1) + " " +
-		dataFromIniFileVector.at(2) + " " +
-		dataFromIniFileVector.at(3) + " " +
-		dataFromIniFileVector.at(4);
+	std::vector<std::string> result;
+	std::string readyToEnter;
+	bool hF = false;
+	bool pF = false;
+	bool dF = false;
+	bool uF = false;
+	bool pasF = false;
+	bool dataSet = true;
+
+	std::string hostStr = "host=";
+	std::copy_if(dataFromIniFileVector.begin(), dataFromIniFileVector.end(), std::back_inserter(result),
+		[&hostStr, &hF](const std::string& s) {
+			if (s.find(hostStr) != std::string::npos) { hF = true; }
+			return s.find(hostStr) == 0;
+		});
+
+	std::string portStr = "port=";
+	std::copy_if(dataFromIniFileVector.begin(), dataFromIniFileVector.end(), std::back_inserter(result),
+		[&portStr, &pF](const std::string& s) {
+			if (s.find(portStr) != std::string::npos) { pF = true; }
+			return s.find(portStr) == 0;
+		});
+
+	std::string dbnametStr = "dbname=";
+	std::copy_if(dataFromIniFileVector.begin(), dataFromIniFileVector.end(), std::back_inserter(result),
+		[&dbnametStr, &dF](const std::string& s) {
+			if (s.find(dbnametStr) != std::string::npos) { dF = true; }
+			return s.find(dbnametStr) == 0;
+		});
+
+	std::string userStr = "user=";
+	std::copy_if(dataFromIniFileVector.begin(), dataFromIniFileVector.end(), std::back_inserter(result),
+		[&userStr, &uF](const std::string& s) {
+			if (s.find(userStr) != std::string::npos) { uF = true; }
+			return s.find(userStr) == 0;
+		});
+
+	std::string passwordStr = "password=";
+	std::copy_if(dataFromIniFileVector.begin(), dataFromIniFileVector.end(), std::back_inserter(result),
+		[&passwordStr, &pasF](const std::string& s) {
+			if (s.find(passwordStr) != std::string::npos) { pasF = true; }
+			return s.find(passwordStr) == 0;
+		});
+	if (hF == false)
+	{
+		dataSet = false;
+		std::cout << "ERROR: DB Host was not found!" << std::endl;
+	}
+	if (pF == false)
+	{
+		dataSet = false;
+		std::cout << "ERROR: DB Port was not found!" << std::endl;
+	}
+	if (dF == false)
+	{
+		dataSet = false;
+		std::cout << "ERROR: DB name was not found!" << std::endl;
+	}
+	if (uF == false)
+	{
+		dataSet = false;
+		std::cout << "ERROR: DB user was not found!" << std::endl;
+	}
+	if (pasF == false)
+	{
+		dataSet = false;
+		std::cout << "ERROR: DB passport was not found!" << std::endl;
+	}
+
+	if (dataSet)
+	{
+		readyToEnter = result.at(0) + " " +
+			result.at(1) + " " +
+			result.at(2) + " " +
+			result.at(3) + " " +
+			result.at(4);
+	}
+	else {
+		std::cout << "ERROR: Can't enter to DB, some data is missing!!!" << std::endl;
+		std::string readyToEnter = "LACK OF DATA";
+	}
 
 	return readyToEnter;
 }
@@ -229,10 +331,29 @@ std::vector<std::string> EnterInfo::getEnterInfo()
 		{
 			std::string str;
 			std::getline(file_path, str);
+
+			if (str.find(';') != std::string::npos)
+			{
+				str.erase(str.find(';'));
+			}
+			if (isFreeSpace(str))
+			{
+				continue;
+			}
+
 			dataFromIniFileVector.push_back(str);
 		}
 	}
 	return dataFromIniFileVector;
+}
+
+bool EnterInfo::isFreeSpace(std::string s)
+{
+	for (int i = 0; i < s.length(); i++) {
+		if (!std::isspace(s[i]))
+			return false;
+	}
+	return true;
 }
 
 //Destructor
@@ -270,6 +391,20 @@ bool EnterInfo::insertDoc(std::string page)
 	{
 		pqxx::work tx(*conPQXX);
 		tx.exec("INSERT INTO documents(page_title) VALUES('" + page + "')");
+		tx.commit();
+		return true;
+	}
+	catch (const pqxx::unique_violation& e) {
+		return false;
+	}
+}
+
+bool EnterInfo::insertBlackListPage(std::string page)
+{
+	try
+	{
+		pqxx::work tx(*conPQXX);
+		tx.exec("INSERT INTO Black_List(black_list_title) VALUES('" + page + "')");
 		tx.commit();
 		return true;
 	}
@@ -445,18 +580,46 @@ std::vector<Link> EnterInfo::to_links(std::vector<std::string> urls)
 
 Link EnterInfo::makeLink(std::string str)
 {
-	std::string protocol_str = str.substr(0, str.find(":"));
-	std::string host_and_query = str.substr(str.find(":") + 3);
 
-	ProtocolType protocol = ProtocolType::HTTP;
-	if (protocol_str == "https") {
-		protocol = ProtocolType::HTTPS;
+	ProtocolType protocol = ProtocolType::HTTPS;;
+	std::string hostName;
+	std::string query;
+	
+	if (str.at(0) == '/')
+	{
+		std::string host_and_query = str.substr(str.find("/") + 1);
+		size_t pos = host_and_query.find("/");
+		if (pos == std::string::npos)
+		{
+			hostName = host_and_query;
+			query = "/";
+		}
+		else {
+
+			hostName = host_and_query.substr(0, pos);
+			query = host_and_query.substr(pos);
+		}
 	}
+	else
+	{
+		std::string protocol_str = str.substr(0, str.find(":"));
+		std::string host_and_query = str.substr(str.find(":") + 3);
 
-	size_t pos = host_and_query.find("/");
-	std::string hostName = host_and_query.substr(0, pos);
-	std::string query = host_and_query.substr(pos);
+		if (protocol_str == "https") {
+			protocol = ProtocolType::HTTPS;
+		}
+		size_t pos = host_and_query.find("/");
+		if (pos == std::string::npos)
+		{
+			hostName = host_and_query;
+			query = "/";
+		}
+		else {
 
+			hostName = host_and_query.substr(0, pos);
+			query = host_and_query.substr(pos);
+		}
+	}
 	return Link{ protocol, hostName, query };
 }
 
@@ -478,7 +641,30 @@ std::vector<std::string> EnterInfo::getPageTitles()
 	return words;
 }
 
+std::vector<std::string> EnterInfo::getBlackListPageTitles()
+{
+	std::vector<std::string> words;
+	pqxx::work tx(*conPQXX);
+	pqxx::result result = tx.exec_params("SELECT black_list_title FROM Black_List");
+	for (const auto& row : result)
+	{
+		std::stringstream ss(row["black_list_title"].c_str());
+		std::string word;
+
+		while (ss >> word) {
+			words.push_back(word);
+		}
+	}
+	tx.commit();
+	return words;
+}
+
 bool EnterInfo::isNewLinkFound(std::string page, std::vector<std::string> page_words)
+{
+	return std::find(page_words.begin(), page_words.end(), page) != page_words.end();
+}
+
+bool EnterInfo::isInBlackList(std::string page, std::vector<std::string> page_words)
 {
 	return std::find(page_words.begin(), page_words.end(), page) != page_words.end();
 }
@@ -487,7 +673,8 @@ void EnterInfo::setDataToDB(std::string page_name, std::string html_data)
 {
 	if (insertDoc(page_name))
 	{
-		std::cout << "The new page "<< page_name <<" was added to DB." << std::endl;
+		std::cout << "\x1b[93m" << "The new page " << page_name
+			<< " was successfully added to DB" << "\x1b[0m" << std::endl;
 	}
 	std::string cleanText = getCleanText(html_data);
 	arr_unique_words = remove_duplicates(cleanText);
@@ -512,26 +699,53 @@ std::vector<std::string> EnterInfo::getSearchResult(std::string search_str)
 	}	
 }
 
-std::vector<Link> EnterInfo::extract_links(std::string html)
+std::vector<Link> EnterInfo::extract_links(const std::string html)
 {
+	
+
+	std::string html_to_get_links = html;
+	
+
 	std::regex link_regex("<a href=\"(.*?)\"", std::regex::icase);
 	std::vector<std::string> old_links = getPageTitles();
+	std::vector<std::string> black_list_links = getBlackListPageTitles();
 	std::vector<std::string> new_links;
-
+	
 	std::smatch match;
-	while (std::regex_search(html, match, link_regex) && new_links.size() < MAX_LINKS) 
+	
+	while (std::regex_search(html_to_get_links, match, link_regex) && new_links.size() < MAX_LINKS)
 	{
-		std::string link = match[1].str();
-		if (!isNewLinkFound(link, old_links))
+		std::string str = match[1];
+
+		if (black_list_links.size() != 0)
 		{
-			new_links.push_back(link);
+			if (isInBlackList(str, black_list_links))
+			{
+				html_to_get_links.erase(match.position(), match.length());
+				continue;
+			}
 		}
-		html.erase(match.position(), match.length());
+
+		if (old_links.size() == 0) {
+
+			if (isValidDomainName(str))
+			{
+				new_links.push_back(remove_fragments(str));
+			}
+		}
+		else {
+			if (!isNewLinkFound(str, old_links))
+			{
+				if (isValidDomainName(str))
+				{
+					new_links.push_back(remove_fragments(str));					
+				}
+			}
+		}
+
+		html_to_get_links.erase(match.position(), match.length());
 	}
-
-	new_links = filter_https(new_links);
-	new_links = remove_after_space(new_links);
-
+	
 	return to_links(new_links);
 }
 
@@ -557,12 +771,12 @@ std::string EnterInfo::getLinkPageName(Link link)
 	return url;
 }
 
-int EnterInfo::getRecurtionDepth()
+int EnterInfo::getRecurtionDepth() const
 {
 	return max_recursion;
 }
 
-unsigned short EnterInfo::getPortNumber()
+unsigned short EnterInfo::getPortNumber() const
 {
 	return server_port_number;
 }
@@ -612,6 +826,9 @@ std::vector<std::string> EnterInfo::getOrderedListOfPages(std::vector<std::strin
 	if (rank_result_vector.size() == 0) 
 	{
 		answer.push_back("NO_RESULTS");
+		std::cout << "\x1b[91m" 
+			<< "No results were found for your query" << "\x1b[0m" << std::endl;
+
 		return answer;
 	}
 	else {
@@ -623,4 +840,72 @@ std::vector<std::string> EnterInfo::getOrderedListOfPages(std::vector<std::strin
 		return answer;
 	}
 
+}
+
+std::string EnterInfo::remove_fragments(const std::string& str)
+{
+	size_t pos = str.find('#');
+	if (pos == std::string::npos) {
+		return str;
+	}
+	else {
+		return str.substr(0, pos);
+	}
+}
+
+bool EnterInfo::has_image_extension(const std::string& line)
+{
+	std::vector<std::string> ALLOWED_IMAGE_EXTENSIONS = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".svg" };
+
+	for (const std::string& ext : ALLOWED_IMAGE_EXTENSIONS) {
+		auto it = std::find_end(line.rbegin(), line.rend(), ext.rbegin(), ext.rend());
+		if (it != line.rend()) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool EnterInfo::isRelativeLinkDomainNameValid(const std::string& domain)
+{
+	// Check for at least one dot (.)
+	if (domain.find('.') == std::string::npos) {
+		return false;
+	}
+
+	// Check for leading or trailing dots
+	if (domain.front() == '.' || domain.back() == '.') {
+		return false;
+	}
+
+	// Basic check for length (1-253 characters)
+	if (domain.size() < 1 || domain.size() > 253) {
+		return false;
+	}
+	return true;
+}
+
+bool EnterInfo::isValidDomainName(const std::string& name)
+{
+	if (name.size() == 0)
+	{
+		return false;
+	}
+
+	if (has_image_extension(name))
+	{
+		return false;
+	}
+
+	if (name.at(0) == '/')
+	{
+		// ѕроверка, €вл€етс€ ли первое слово допустимым доменным именем
+		if (!isRelativeLinkDomainNameValid(name.substr(name.find("/") + 1)))
+		{
+			return false;
+		}
+	}
+
+	return true;
 }

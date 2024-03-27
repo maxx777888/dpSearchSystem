@@ -27,8 +27,6 @@ public:
 		int value;
 	};
 
-
-
 	//Constructor
 	EnterInfo(const std::string& _file);
 	EnterInfo() = delete;
@@ -48,8 +46,10 @@ public:
 
 	std::string getLinkPageName(Link link);//Переводит объект Link в строку
 
-	int getRecurtionDepth();//Возвращает глубину рекурсии
-	unsigned short getPortNumber();
+	int getRecurtionDepth() const;//Возвращает глубину рекурсии
+	unsigned short getPortNumber() const;//Возвращает номер порта на котором находится сервер
+
+	bool insertBlackListPage(std::string page);//Добавляет страницы в БД Black_List
 
 private:
 	//Переменные
@@ -59,7 +59,7 @@ private:
 	int max_recursion = 0;//Переменная глубины рекурсии
 	std::shared_ptr<pqxx::connection> conPQXX; //Указатель на переменную подключения к БД
 	std::vector <std::string> dataFromIniFileVector; //Вектор хранит данные из файла
-	const int MAX_LINKS = 100; //Максимальное кол-во  ссылок, которые можно получить 
+	const int MAX_LINKS = 1000; //Максимальное кол-во  ссылок, которые можно получить 
 	const int MAX_SEARCH_WORDS = 4;//Максимальное кол-во слов учавствующих в поиске
 	const int MAX_SEARCH_RESULTS = 10;//Максимальное кол-во страниц выводимых на экран 
 	unsigned short server_port_number = 1111; //Порт для сервера
@@ -69,6 +69,7 @@ private:
 	void getServerInfo();//Получает данные из файла из конструктора класса
 	std::string enterToDBString(); //Создает необходимую строку для связи с БД
 	std::vector<std::string> getEnterInfo(); //Собирает в вектор данные из файла
+	bool isFreeSpace(std::string s);//Функция возвращает True, если строка без символов и пустая
 
 	//Методы для работы с БД
 	bool isEstablishConnection(std::shared_ptr<pqxx::connection> c);//Возвращает true если есть связь с БД
@@ -84,6 +85,7 @@ private:
 	void insertWordVectorToDB(std::vector<std::string> v);//Добавляем слова в таблицу Words
 	void insertMainData(std::string name, std::map<std::string, int> m);//Добавляет данные в таблицу documents_words
 	std::vector<std::string> getPageTitles();//Возвращает вектор всех записанных страниц
+	std::vector<std::string> getBlackListPageTitles();//Возвращает вектор всех записанных страниц в Black_List
 
 	//Технические методы 
 	std::vector<std::string> split_string(const std::string& str);//Разбивает строку в вектор слов
@@ -111,5 +113,14 @@ private:
 	Link makeLink(std::string str);
 	//Возвращает true если ссылка на страницу уже добавлена в таблицу
 	bool isNewLinkFound(std::string page, std::vector<std::string> page_words);
-
+	//Возвращает true если ссылка на страницу есть в черном списке 
+	bool isInBlackList(std::string page, std::vector<std::string> page_words);
+	//Возвращает строку отчищенную от фрагментов
+	std::string remove_fragments(const std::string& str);
+	//Делает проверку на картинку, если ссылка имеет рассширение как у картинки, возвращает true
+	bool has_image_extension(const std::string& line);
+	//Возвращает true если относительная ссылка состоит из домейна в первой части 
+	bool isRelativeLinkDomainNameValid(const std::string& domain);
+	//Возвращает true если ссылка подходит для перехода дальше и записи в вектор New Links
+	bool isValidDomainName(const std::string& name);
 };

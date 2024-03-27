@@ -1,8 +1,12 @@
-host=localhost
+
 port=5432
 dbname=myDP
-user=postgres
+;some comments
 password=A159159a
-https://en.wikipedia.org/wiki/Main_Page
-3
-8080
+StartPage=https://en.wikipedia.org/wiki/Main_Page
+RecursionDepth=3
+
+host=localhost
+Port=8080
+;more comments
+user=postgres ;more comments
