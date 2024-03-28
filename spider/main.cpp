@@ -36,15 +36,15 @@ void parseLink(const Link& link, int depth, EnterInfo &s)
 {
 	try {
 		
-		std::cout << "\x1b[91m" << "Recursion number is " << depth << "\x1b[0m" << std::endl;
+		std::cout << "\x1b[96m" << "Recursion number is " << depth << "\x1b[0m" << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 		std::string html = getHtmlContent(link);
 
 		if (html.size() == 0)
 		{
-			std::cout << s.getLinkPageName(link) << " #---> ";
-			std::cout << "Failed to get HTML Content" << std::endl;
+			std::cout << s.getLinkPageName(link) << "\x1b[91m" << " #---> " ;
+			std::cout << "Failed to get HTML Content" <<  "\x1b[0m" << std::endl;
 			if (s.insertBlackListPage(s.getLinkPageName(link)))
 			{
 				std::cout << s.getLinkPageName(link) << " added to Black List " << std::endl;
@@ -61,9 +61,10 @@ void parseLink(const Link& link, int depth, EnterInfo &s)
 		std::string documentName = s.getLinkPageName(link);
 		
 		// TODO: Parse HTML code here on your own
-		s.setDataToDB(documentName, html);
 		// TO: Collect more links from HTML code and add them to the parser like that:
-		
+
+
+		s.setDataToDB(documentName, html);
 		std::vector<Link> links = { s.extract_links(html) };
 		
 		if (links.size() != 0)

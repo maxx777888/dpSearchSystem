@@ -597,12 +597,9 @@ Link EnterInfo::makeLink(std::string str)
 		else {
 			hostName = str.substr(0, pos);
 			query = str.substr(pos);
-		}
+		}	
 
-	
-		
-	}
-	else
+	} else
 	{
 		std::string protocol_str = str.substr(0, str.find(":"));
 		std::string host_and_query = str.substr(str.find(":") + 3);
@@ -746,17 +743,9 @@ std::vector<Link> EnterInfo::extract_links(const std::string html)
 			new_links.push_back(remove_fragments(str));
 
 		}
+		//new_links.push_back(remove_fragments(str));
 		html_to_get_links.erase(match.position(), match.length());
 	}
-
-	std::cout << std::endl;
-	std::cout << "The links to add to DB " << std::endl;
-	for (auto v : new_links)
-	{
-		std::cout << v << std::endl;
-	}
-	std::cout << "That it " << std::endl;
-	std::cout << std::endl;
 	
 	return to_links(new_links);
 }
