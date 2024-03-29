@@ -26,7 +26,7 @@ bool EnterInfo::isEstablishConnection(std::shared_ptr<pqxx::connection> c)
 		return true;
 	}
 	else {
-		std::cout << "Error occure while connecting to DB!" << std::endl;
+		std::cout << "\x1b[91m" << "Error occure while connecting to DB!" << "\x1b[0m" << std::endl;
 		return false;
 	}
 }
@@ -68,7 +68,7 @@ void EnterInfo::creatTable()
 	}
 	catch (pqxx::sql_error e)
 	{
-		std::cout << e.what() << std::endl;
+		std::cout << "\x1b[91m" << e.what() << "\x1b[0m" << std::endl;
 	}
 }
 
@@ -105,18 +105,27 @@ std::string EnterInfo::remove_html_tags(const std::string& html)
 
 std::string EnterInfo::remove_punc(const std::string& text)
 {
+	if (text.empty()) {
+		return "";
+	}
 	std::regex punc_regex("[[:punct:]]");
 	return std::regex_replace(text, punc_regex, "");
 }
 
 std::string EnterInfo::remove_whitespace(const std::string& text)
 {
+	if (text.empty()) {
+		return "";
+	}
 	std::regex whitespace_regex("[[:space:]]");
 	return std::regex_replace(text, whitespace_regex, " ");
 }
 
 std::string EnterInfo::make_lower_case(const std::string& text)
 {
+	if (text.empty()) {
+		return "";
+	}
 	boost::locale::generator gen;
 	std::locale loc = gen("en_US.UTF-8");
 	std::string lower_str;
@@ -129,6 +138,9 @@ std::string EnterInfo::make_lower_case(const std::string& text)
 
 std::vector<std::string> EnterInfo::remove_duplicates(const std::string& text)
 {
+	if (text.empty()) {
+		return {};
+	}
 	std::regex word_regex("[[:alpha:]]+");
 	std::sregex_iterator it(text.begin(), text.end(), word_regex);
 	std::set<std::string> unique_words;
@@ -161,6 +173,9 @@ bool EnterInfo::is_valid_word(const std::string& word)
 
 std::string EnterInfo::get_ready_to_rank_text(const std::string& text)
 {
+	if (text.empty()) {
+		return "";
+	}
 	std::vector<std::string> words;
 	std::regex word_regex("[[:alpha:]]+");
 	std::sregex_iterator it(text.begin(), text.end(), word_regex);
@@ -188,6 +203,9 @@ std::string EnterInfo::get_ready_to_rank_text(const std::string& text)
 
 std::map<std::string, int> EnterInfo::words_count(const std::string& text)
 {
+	if (text.empty()) {
+		return {};
+	}
 	std::regex word_regex("[[:alpha:]]+");
 	std::sregex_iterator it(text.begin(), text.end(), word_regex);
 
@@ -212,7 +230,7 @@ void EnterInfo::getServerInfo()
 {
 	std::string startPageStr = "StartPage=";
 	std::string recursionStr = "RecursionDepth=";
-	std::string portStr = "Port=";
+	std::string portStr = "ServerPort=";
 	bool spF = false;
 	bool rF = false;
 	bool pF = false;
@@ -284,27 +302,27 @@ std::string EnterInfo::enterToDBString()
 	if (hF == false)
 	{
 		dataSet = false;
-		std::cout << "ERROR: DB Host was not found!" << std::endl;
+		std::cout << "\x1b[91m" << "ERROR: DB Host was not found!" << "\x1b[0m" << std::endl;
 	}
 	if (pF == false)
 	{
 		dataSet = false;
-		std::cout << "ERROR: DB Port was not found!" << std::endl;
+		std::cout << "\x1b[91m" << "ERROR: DB Port was not found!" << "\x1b[0m" << std::endl;
 	}
 	if (dF == false)
 	{
 		dataSet = false;
-		std::cout << "ERROR: DB name was not found!" << std::endl;
+		std::cout << "\x1b[91m" << "ERROR: DB name was not found!" << "\x1b[0m" << std::endl;
 	}
 	if (uF == false)
 	{
 		dataSet = false;
-		std::cout << "ERROR: DB user was not found!" << std::endl;
+		std::cout << "\x1b[91m" << "ERROR: DB user was not found!" << "\x1b[0m" << std::endl;
 	}
 	if (pasF == false)
 	{
 		dataSet = false;
-		std::cout << "ERROR: DB passport was not found!" << std::endl;
+		std::cout << "\x1b[91m" << "ERROR: DB passport was not found!" << "\x1b[0m" << std::endl;
 	}
 
 	if (dataSet)
@@ -316,7 +334,7 @@ std::string EnterInfo::enterToDBString()
 			result.at(4);
 	}
 	else {
-		std::cout << "ERROR: Can't enter to DB, some data is missing!!!" << std::endl;
+		std::cout << "\x1b[91m" << "ERROR: Can't enter to DB, some data is missing!!!" << "\x1b[0m" << std::endl;
 		std::string readyToEnter = "LACK OF DATA";
 	}
 
@@ -389,6 +407,10 @@ bool EnterInfo::insertDoc(std::string page)
 {
 	try
 	{
+		if (page.empty())
+		{
+			return false;
+		}
 		pqxx::work tx(*conPQXX);
 		tx.exec("INSERT INTO documents(page_title) VALUES('" + page + "')");
 		tx.commit();
@@ -403,6 +425,10 @@ bool EnterInfo::insertBlackListPage(std::string page)
 {
 	try
 	{
+		if (page.empty())
+		{
+			return false;
+		}
 		pqxx::work tx(*conPQXX);
 		tx.exec("INSERT INTO Black_List(black_list_title) VALUES('" + page + "')");
 		tx.commit();
@@ -417,6 +443,10 @@ bool EnterInfo::insertWord(std::string word)
 {
 	try
 	{
+		if (word.empty())
+		{
+			return false;
+		}
 		pqxx::work tx(*conPQXX);
 		tx.exec("INSERT INTO words(word) VALUES('" + word + "')");
 		tx.commit();
@@ -715,7 +745,7 @@ std::vector<Link> EnterInfo::extract_links(const std::string html)
 	std::vector<std::string> new_links;
 	
 	std::smatch match;
-	
+
 	while (std::regex_search(html_to_get_links, match, link_regex) && new_links.size() < MAX_LINKS)
 	{
 		std::string str = match[1];
@@ -739,14 +769,12 @@ std::vector<Link> EnterInfo::extract_links(const std::string html)
 					continue;
 				}
 			}
-
 			new_links.push_back(remove_fragments(str));
-
 		}
-		//new_links.push_back(remove_fragments(str));
+		
 		html_to_get_links.erase(match.position(), match.length());
 	}
-	
+
 	return to_links(new_links);
 }
 
@@ -870,6 +898,14 @@ bool EnterInfo::has_image_extension(const std::string& line)
 
 bool EnterInfo::isRelativeLinkDomainNameValid(const std::string& domain)
 {
+	if (domain.empty()) {
+		return false;
+	}
+
+	if (domain.at(0) == '#') {
+		return false;
+	}
+
 	if (domain.find('.') == std::string::npos) {
 		return false;
 	}
@@ -891,6 +927,11 @@ bool EnterInfo::isValidDomainName(const std::string& name)
 		return false;
 	}
 
+	if (name.at(0) == '#')
+	{
+		return false;
+	}
+
 	if (has_image_extension(name))
 	{
 		return false;
@@ -902,6 +943,11 @@ bool EnterInfo::isValidDomainName(const std::string& name)
 		{
 			return false;
 		}
+	}
+
+	if (!isRelativeLinkDomainNameValid(name))
+	{
+		return false;
 	}
 
 	return true;

@@ -15,8 +15,6 @@
 #include "spider/link.h"
 
 
-
-
 class EnterInfo
 {
 public:

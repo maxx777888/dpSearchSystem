@@ -107,7 +107,7 @@ int main()
 		EnterInfo spyder("../../../../info_ini.txt");
 		if (!spyder.createTable())
 		{
-			std::cout << "It was not possible to establish a connection with the DB" << std::endl;
+			std::cout << "\x1b[91m" << "It was not possible to establish a connection with the DB" << "\x1b[0m" << std::endl;
 		}
 			
 		int recursion_depth = spyder.getRecurtionDepth();
