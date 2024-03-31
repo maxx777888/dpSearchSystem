@@ -22,7 +22,7 @@ EnterInfo::EnterInfo(const std::string& _file) : fileName(_file)
 bool EnterInfo::isEstablishConnection(std::shared_ptr<pqxx::connection> c)
 {
 	if (c) {
-		std::cout << "Establish connection to DB!" << std::endl;
+		//std::cout << "Establish connection to DB!" << std::endl;
 		return true;
 	}
 	else {
@@ -57,12 +57,6 @@ void EnterInfo::creatTable()
 			"FOREIGN KEY(document_id) REFERENCES documents(id), "
 			"FOREIGN KEY(word_id) REFERENCES words(id)"
 			")");
-		
-		// Создание таблицы "Black-List"
-		tx.exec("CREATE TABLE IF NOT EXISTS Black_List ("
-			"id SERIAL PRIMARY KEY, "
-			"black_list_title VARCHAR(255) NOT NULL UNIQUE "
-			")");
 
 		tx.commit();
 	}
@@ -83,6 +77,7 @@ std::vector<int> EnterInfo::getAllPagesIdList()
 	}
 	return ids;
 }
+
 
 std::vector<std::string> EnterInfo::split_string(const std::string& str)
 {	
@@ -237,7 +232,7 @@ void EnterInfo::getServerInfo()
 
 	for (const auto& str : dataFromIniFileVector) {
 		if (str.find(startPageStr) == 0) {
-			starting_page = makeLink(str.substr(startPageStr.length()));
+			starting_page = makeStartPageLink(str.substr(startPageStr.length()));
 			spF = true;
 		}
 		if (str.find(recursionStr) == 0) {
@@ -421,23 +416,6 @@ bool EnterInfo::insertDoc(std::string page)
 	}
 }
 
-bool EnterInfo::insertBlackListPage(std::string page)
-{
-	try
-	{
-		if (page.empty())
-		{
-			return false;
-		}
-		pqxx::work tx(*conPQXX);
-		tx.exec("INSERT INTO Black_List(black_list_title) VALUES('" + page + "')");
-		tx.commit();
-		return true;
-	}
-	catch (const pqxx::unique_violation& e) {
-		return false;
-	}
-}
 
 bool EnterInfo::insertWord(std::string word)
 {
@@ -598,24 +576,24 @@ std::vector<std::string> EnterInfo::remove_after_space(std::vector<std::string> 
 	return updated_words;
 }
 
-std::vector<Link> EnterInfo::to_links(std::vector<std::string> urls)
+std::vector<Link> EnterInfo::to_links(std::vector<std::string> urls, Link domainName)
 {
 	std::vector<Link> links;
 	for (std::string url : urls)
 	{
-		links.push_back(makeLink(url));
+		links.push_back(makeLink(url, domainName));
 	}
 	return links;
 }
 
-Link EnterInfo::makeLink(std::string str)
+Link EnterInfo::makeLink(std::string str, Link domainName)
 {
 
-	ProtocolType protocol = ProtocolType::HTTPS;;
+	ProtocolType protocol = ProtocolType::HTTPS;
 	std::string hostName;
 	std::string query;
-	
-	if (str.at(0) == '/')
+
+	if (str.at(0) == '/' && str.at(1) == '/')
 	{
 		str.erase(0, str.find_first_not_of("/"));
 		size_t pos = str.find("/");
@@ -627,7 +605,36 @@ Link EnterInfo::makeLink(std::string str)
 		else {
 			hostName = str.substr(0, pos);
 			query = str.substr(pos);
-		}	
+		}
+		return Link{ protocol, hostName, query };
+	}
+	
+	if (str.at(0) == '/')
+	{
+		str.erase(0, str.find_first_not_of("/"));
+		size_t pos = str.find("/");
+		hostName = domainName.hostName;
+
+		if (pos == std::string::npos)
+		{
+			if (hostName == str)
+			{
+				query = "/";
+
+			} else {
+
+				query = "/" + str;
+			}
+		} else {
+
+			if (hostName == str.substr(0, pos))
+			{
+				query = str.substr(pos);
+			}
+			else {
+				query = "/" + str;
+			}
+		}
 
 	} else
 	{
@@ -652,6 +659,33 @@ Link EnterInfo::makeLink(std::string str)
 	return Link{ protocol, hostName, query };
 }
 
+Link EnterInfo::makeStartPageLink(std::string str)
+{
+	ProtocolType protocol = ProtocolType::HTTPS;
+	std::string hostName;
+	std::string query;
+
+	std::string protocol_str = str.substr(0, str.find(":"));
+	std::string host_and_query = str.substr(str.find(":") + 3);
+
+	if (protocol_str == "https") {
+		protocol = ProtocolType::HTTPS;
+	}
+	size_t pos = host_and_query.find("/");
+	if (pos == std::string::npos)
+	{
+		hostName = host_and_query;
+		query = "/";
+	}
+	else {
+
+		hostName = host_and_query.substr(0, pos);
+		query = host_and_query.substr(pos);
+	}
+
+	return Link{ protocol, hostName, query };
+}
+
 std::vector<std::string> EnterInfo::getPageTitles()
 {
 	std::vector<std::string> words;
@@ -669,25 +703,6 @@ std::vector<std::string> EnterInfo::getPageTitles()
 	tx.commit();
 	return words;
 }
-
-std::vector<std::string> EnterInfo::getBlackListPageTitles()
-{
-	std::vector<std::string> words;
-	pqxx::work tx(*conPQXX);
-	pqxx::result result = tx.exec_params("SELECT black_list_title FROM Black_List");
-	for (const auto& row : result)
-	{
-		std::stringstream ss(row["black_list_title"].c_str());
-		std::string word;
-
-		while (ss >> word) {
-			words.push_back(word);
-		}
-	}
-	tx.commit();
-	return words;
-}
-
 
 bool EnterInfo::isLinkExistsInBD(std::string page, std::vector<std::string> page_words)
 {
@@ -735,13 +750,12 @@ std::vector<std::string> EnterInfo::getSearchResult(std::string search_str)
 	}	
 }
 
-std::vector<Link> EnterInfo::extract_links(const std::string html)
+std::vector<Link> EnterInfo::extract_links(Link domainName,const std::string html)
 {
 	std::string html_to_get_links = html;
 	
 	std::regex link_regex("<a href=\"(.*?)\"", std::regex::icase);
-	std::vector<std::string> old_links = getPageTitles();
-	std::vector<std::string> black_list_links = getBlackListPageTitles();
+	std::vector<std::string> old_links = getPageTitles();	
 	std::vector<std::string> new_links;
 	
 	std::smatch match;
@@ -752,14 +766,6 @@ std::vector<Link> EnterInfo::extract_links(const std::string html)
 
 		if (isValidDomainName(str))
 		{
-			if (black_list_links.size() != 0)
-			{
-				if (isLinkExistsInBD(str, black_list_links))
-				{
-					html_to_get_links.erase(match.position(), match.length());
-					continue;
-				} 
-			}
 
 			if (old_links.size() != 0) 
 			{
@@ -775,7 +781,7 @@ std::vector<Link> EnterInfo::extract_links(const std::string html)
 		html_to_get_links.erase(match.position(), match.length());
 	}
 
-	return to_links(new_links);
+	return to_links(new_links, domainName);
 }
 
 std::string EnterInfo::getLinkPageName(Link link)
@@ -896,29 +902,6 @@ bool EnterInfo::has_image_extension(const std::string& line)
 	return false;
 }
 
-bool EnterInfo::isRelativeLinkDomainNameValid(const std::string& domain)
-{
-	if (domain.empty()) {
-		return false;
-	}
-
-	if (domain.at(0) == '#') {
-		return false;
-	}
-
-	if (domain.find('.') == std::string::npos) {
-		return false;
-	}
-
-	if (domain.front() == '.' || domain.back() == '.') {
-		return false;
-	}
-
-	if (domain.size() < 1 || domain.size() > 253) {
-		return false;
-	}
-	return true;
-}
 
 bool EnterInfo::isValidDomainName(const std::string& name)
 {
@@ -933,19 +916,6 @@ bool EnterInfo::isValidDomainName(const std::string& name)
 	}
 
 	if (has_image_extension(name))
-	{
-		return false;
-	}
-
-	if (name.at(0) == '/')
-	{
-		if (!isRelativeLinkDomainNameValid(name.substr(name.find("/") + 1)))
-		{
-			return false;
-		}
-	}
-
-	if (!isRelativeLinkDomainNameValid(name))
 	{
 		return false;
 	}

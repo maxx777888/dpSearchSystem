@@ -45,11 +45,6 @@ void parseLink(const Link& link, int depth, EnterInfo &s)
 		{
 			std::cout << s.getLinkPageName(link) << "\x1b[91m" << " #---> " ;
 			std::cout << "Failed to get HTML Content" <<  "\x1b[0m" << std::endl;
-			if (s.insertBlackListPage(s.getLinkPageName(link)))
-			{
-				std::cout << s.getLinkPageName(link) << " added to Black List " << std::endl;
-			}
-			
 			return;
 		} 
 
@@ -65,7 +60,7 @@ void parseLink(const Link& link, int depth, EnterInfo &s)
 
 
 		s.setDataToDB(documentName, html);
-		std::vector<Link> links = { s.extract_links(html) };
+		std::vector<Link> links = { s.extract_links(link, html) };
 		
 		if (links.size() != 0)
 		{

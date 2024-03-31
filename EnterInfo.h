@@ -40,14 +40,12 @@ public:
 	std::vector<std::string> getSearchResult(std::string search_str);
 
 	//вытаскивает ссылки из html данных и возвращает вектор ссылок
-	std::vector<Link> extract_links(std::string html);
+	std::vector<Link> extract_links(Link domainName, std::string html);
 
 	std::string getLinkPageName(Link link);//Переводит объект Link в строку
 
 	int getRecurtionDepth() const;//Возвращает глубину рекурсии
 	unsigned short getPortNumber() const;//Возвращает номер порта на котором находится сервер
-
-	bool insertBlackListPage(std::string page);//Добавляет страницы в БД Black_List
 
 private:
 	//Переменные
@@ -73,6 +71,7 @@ private:
 	bool isEstablishConnection(std::shared_ptr<pqxx::connection> c);//Возвращает true если есть связь с БД
 	void creatTable(); //Создаем таблицы в БД
 	std::vector<int> getAllPagesIdList();//Возращает все существующие id в таблице documents
+	
 	int getWordRank(int page, int word);//Возвращает сколько раз встретилось слово на странице
 	int getDocId(std::string page);//Возвращает id номер страницы в таблице или 0 если такой страницы нет
 	int getWordId(std::string word);//Возвращает id номер слова в таблице или 0 если такого слова нет
@@ -83,7 +82,6 @@ private:
 	void insertWordVectorToDB(std::vector<std::string> v);//Добавляем слова в таблицу Words
 	void insertMainData(std::string name, std::map<std::string, int> m);//Добавляет данные в таблицу documents_words
 	std::vector<std::string> getPageTitles();//Возвращает вектор всех записанных страниц
-	std::vector<std::string> getBlackListPageTitles();//Возвращает вектор всех записанных страниц в Black_List
 
 	//Технические методы 
 	std::vector<std::string> split_string(const std::string& str);//Разбивает строку в вектор слов
@@ -106,9 +104,12 @@ private:
 	//Удаляет все слова после пробела
 	std::vector<std::string> remove_after_space(std::vector<std::string> words);
 	//Превращает вектор строк в вектор объектов Link
-	std::vector<Link> to_links(std::vector<std::string> urls);
+	std::vector<Link> to_links(std::vector<std::string> urls, Link domainName);
+
 	//Превращает строку в объект Link
-	Link makeLink(std::string str);
+	Link makeLink(std::string str, Link domainName);
+	Link makeStartPageLink(std::string str);//Превращает начальную строку из файла в объект Link
+	
 	//Возвращает true если ссылка на страницу уже добавлена в таблицу
 	bool isLinkExistsInBD(std::string page, std::vector<std::string> page_words);
 	
@@ -116,8 +117,7 @@ private:
 	std::string remove_fragments(const std::string& str);
 	//Делает проверку на картинку, если ссылка имеет рассширение как у картинки, возвращает true
 	bool has_image_extension(const std::string& line);
-	//Возвращает true если относительная ссылка состоит из домейна в первой части 
-	bool isRelativeLinkDomainNameValid(const std::string& domain);
+	
 	//Возвращает true если ссылка подходит для перехода дальше и записи в вектор New Links
 	bool isValidDomainName(const std::string& name);
 };

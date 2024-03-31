@@ -43,14 +43,14 @@ HttpConnection::HttpConnection(tcp::socket socket)
 }
 
 
-void HttpConnection::start()
+void HttpConnection::start(EnterInfo &serverDB)
 {
-	readRequest();
+	readRequest(serverDB);
 	checkDeadline();
 }
 
 
-void HttpConnection::readRequest()
+void HttpConnection::readRequest(EnterInfo &serverDB)
 {
 	auto self = shared_from_this();
 
@@ -58,16 +58,16 @@ void HttpConnection::readRequest()
 		socket_,
 		buffer_,
 		request_,
-		[self](beast::error_code ec,
+		[self, &serverDB](beast::error_code ec,
 			std::size_t bytes_transferred)
 		{
 			boost::ignore_unused(bytes_transferred);
 			if (!ec)
-				self->processRequest();
+				self->processRequest(serverDB);
 		});
 }
 
-void HttpConnection::processRequest()
+void HttpConnection::processRequest(EnterInfo &serverDB)
 {
 	response_.version(request_.version());
 	response_.keep_alive(false);
@@ -82,7 +82,7 @@ void HttpConnection::processRequest()
 	case http::verb::post:
 		response_.result(http::status::ok);
 		response_.set(http::field::server, "Beast");
-		createResponsePost();
+		createResponsePost(serverDB);
 		break;
 
 	default:
@@ -126,7 +126,7 @@ void HttpConnection::createResponseGet()
 	}
 }
 
-void HttpConnection::createResponsePost()
+void HttpConnection::createResponsePost(EnterInfo &serverDB)
 {
 	if (request_.target() == "/")
 	{
@@ -157,11 +157,11 @@ void HttpConnection::createResponsePost()
 		}
 
 		// TODO: Fetch your own search results here
-		EnterInfo server_post("../../../../info_ini.txt");
+		
 		std::vector<std::string> searchResult;
-		if (server_post.createTable())
+		if (serverDB.createTable())
 		{
-			searchResult = { server_post.getSearchResult(s) };	
+			searchResult = { serverDB.getSearchResult(s) };
 		}
 		else {
 			searchResult = { "This_is_warning" };

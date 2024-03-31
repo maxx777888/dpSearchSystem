@@ -28,17 +28,17 @@ protected:
 	net::steady_timer deadline_{
 		socket_.get_executor(), std::chrono::seconds(60)};
 
-	void readRequest();
-	void processRequest();
+	void readRequest(EnterInfo &serverDB);
+	void processRequest(EnterInfo &serverDB);
 
 	void createResponseGet();
 
-	void createResponsePost();
+	void createResponsePost(EnterInfo &serverDB);
 	void writeResponse();
 	void checkDeadline();
 
 public:
 	HttpConnection(tcp::socket socket);
-	void start();
+	void start(EnterInfo &s);
 };
 
